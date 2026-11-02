@@ -33,18 +33,46 @@ jobs:
           EOF
           chmod 600 ~/.snowflake/connections.toml
 
+      # Workshop addition: the dbt-review agent runs `dbt build`, so the runner needs dbt + a profile.
+      - name: Install dbt and write profiles.yml
+        run: |
+          pip install --quiet dbt-core dbt-snowflake
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml <<EOF
+          coco_de_guide:
+            target: dev
+            outputs:
+              dev:
+                type: snowflake
+                account: "${{ secrets.SNOWFLAKE_ACCOUNT }}"
+                user: "${{ secrets.SNOWFLAKE_USER }}"
+                password: "${{ secrets.SNOWFLAKE_PASSWORD }}"
+                role: DEMO_ROLE
+                database: DEMO_DB
+                warehouse: DEMO_WH
+                schema: "${{ secrets.SNOWFLAKE_SCHEMA }}"
+                threads: 4
+          EOF
+
       - name: Install Cortex Code CLI
         run: |
           curl -LsS https://ai.snowflake.com/static/cc-scripts/install.sh | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
+      # Workshop changes: load the repo's plugin explicitly, allow the tools the agent needs
+      # (headless runs block shell by default), keep errors visible, and fail if no verdict came back.
       - name: Run Cortex Code and the dbt-review agent
         run: |
-          cortex --print "Use the dbt-review agent to review the changes in this PR" \
-            > review.md 2>/dev/null || true
+          cortex --print "Use the dbt-review agent to review the changes in this PR against origin/main. Output only the final Markdown table and the overall PASS/FAIL." \
+            --plugin-dir .cortex/plugins/coco-de-guide \
+            --allowed-tools "Bash" "Read" "Grep" "Glob" \
+            --max-turns 40 \
+            -o review.md
           echo "----- review.md -----"; cat review.md
+          grep -qiE 'overall[^a-z]*(pass|fail)' review.md || { echo "::error::No PASS/FAIL verdict. Check the log above (connection, network policy, or tool permissions)."; exit 1; }
 
       - name: Post review as PR comment
+        if: always()
         uses: actions/github-script@v9
         with:
           script: |
