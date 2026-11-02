@@ -1,0 +1,9 @@
+{
+  "name": "coco-de-guide",
+  "description": "dbt/Snowflake data engineering plugin for the CoCo DE Guide, plus the Part 2 automations",
+  "version": "1.0.0",
+  "author": { "name": "<YOUR_NAME>" },
+  "skills": ["./skills"],
+  "agents": ["./agents"],
+  "hooks": "./hooks/hooks.json"
+}
