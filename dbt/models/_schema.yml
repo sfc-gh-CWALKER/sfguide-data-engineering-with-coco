@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: customers
+    description: One row per customer with nation and region.
+    columns:
+      - name: customer_key
+        tests:
+          - not_null
+          - unique
+      - name: customer_name
+        tests:
+          - not_null
+      - name: market_segment
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['AUTOMOBILE', 'BUILDING', 'FURNITURE', 'HOUSEHOLD', 'MACHINERY']
+      - name: region
+        tests:
+          - not_null
+
+  - name: orders_summary
+    description: One row per order with line-item totals.
+    columns:
+      - name: order_key
+        tests:
+          - not_null
+          - unique
+      - name: customer_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('customers')
+                field: customer_key
+      - name: order_status
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['F', 'O', 'P']
+
+  - name: supplier_performance
+    description: Performance metrics per supplier from supplier and lineitem.
+    columns:
+      - name: supplier_key
+        tests:
+          - not_null
+          - unique
