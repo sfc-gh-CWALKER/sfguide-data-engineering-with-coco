@@ -31,7 +31,8 @@ GRANT OWNERSHIP ON DATABASE DEMO_DB TO ROLE DEMO_ROLE COPY CURRENT GRANTS;
 -- Sample data used by the dbt project (already granted to PUBLIC on most accounts)
 GRANT IMPORTED PRIVILEGES ON DATABASE SNOWFLAKE_SAMPLE_DATA TO ROLE DEMO_ROLE;
 
--- Participants: add every attendee's Snowflake username
+-- Participants: replace the examples with every attendee's Snowflake username.
+-- A misspelled name is skipped and listed in the result; everyone else still gets the role.
 EXECUTE IMMEDIATE $$
 DECLARE
   users ARRAY DEFAULT ARRAY_CONSTRUCT(
@@ -40,14 +41,21 @@ DECLARE
     -- , 'NEXT_USER', ...
   );
   granted ARRAY DEFAULT ARRAY_CONSTRUCT();
+  not_found ARRAY DEFAULT ARRAY_CONSTRUCT();
   user_name VARCHAR;
 BEGIN
   FOR i IN 0 TO ARRAY_SIZE(:users) - 1 DO
-    user_name := UPPER(GET(:users, :i)::VARCHAR);
-    EXECUTE IMMEDIATE 'GRANT ROLE DEMO_ROLE TO USER "' || :user_name || '"';
-    granted := ARRAY_APPEND(:granted, :user_name);
+    user_name := UPPER(TRIM(GET(:users, :i)::VARCHAR));
+    BEGIN
+      EXECUTE IMMEDIATE 'GRANT ROLE DEMO_ROLE TO USER "' || :user_name || '"';
+      granted := ARRAY_APPEND(:granted, :user_name);
+    EXCEPTION
+      WHEN OTHER THEN
+        not_found := ARRAY_APPEND(:not_found, :user_name);
+    END;
   END FOR;
-  RETURN 'DEMO_ROLE granted to: ' || ARRAY_TO_STRING(:granted, ', ');
+  RETURN 'DEMO_ROLE granted to ' || ARRAY_SIZE(:granted) || ': ' || ARRAY_TO_STRING(:granted, ', ') ||
+         IFF(ARRAY_SIZE(:not_found) > 0, '  |  NOT FOUND, check spelling: ' || ARRAY_TO_STRING(:not_found, ', '), '');
 END;
 $$;
 

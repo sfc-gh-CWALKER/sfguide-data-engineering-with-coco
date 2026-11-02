@@ -1,15 +1,17 @@
 -- =====================================================================
 -- Data Engineering with CoCo: admin readiness check (READ-ONLY)
 --
--- Run as ACCOUNTADMIN before the workshop, ideally a day after running
--- scripts/admin_setup.sql (ACCOUNT_USAGE views can lag up to ~2 hours).
+-- Run as ACCOUNTADMIN, before and after scripts/admin_setup.sql.
 -- Nothing here changes the account. Each query says what "ready" looks like.
 --
 -- 1. Put every attendee's Snowflake username in the list in check 9.
--- 2. Run all, and read each result against the "READY IF" comment above it.
+-- 2. Set the warehouse below to any warehouse you can use (DEMO_WH may not
+--    exist yet the first time you run this).
+-- 3. Run all, and read each result against the "READY IF" comment above it.
 -- =====================================================================
 
 USE ROLE ACCOUNTADMIN;
+USE WAREHOUSE COMPUTE_WH;
 
 -- 1. Shared workshop objects exist ------------------------------------
 -- READY IF: one row each for DEMO_ROLE, DEMO_WH and DEMO_DB.
@@ -24,12 +26,11 @@ SHOW GRANTS ON DATABASE DEMO_DB;
 SHOW GRANTS ON WAREHOUSE DEMO_WH;
 
 -- 3. Sample data the dbt project reads ---------------------------------
--- READY IF: SNOWFLAKE_SAMPLE_DATA exists, and the count returns 1500000.
--- If the count fails: GRANT IMPORTED PRIVILEGES ON DATABASE SNOWFLAKE_SAMPLE_DATA TO ROLE DEMO_ROLE;
+-- READY IF: SNOWFLAKE_SAMPLE_DATA exists, and the grants include a USAGE or
+-- IMPORTED PRIVILEGES row for PUBLIC or DEMO_ROLE.
+-- If not: GRANT IMPORTED PRIVILEGES ON DATABASE SNOWFLAKE_SAMPLE_DATA TO ROLE DEMO_ROLE;
 SHOW DATABASES LIKE 'SNOWFLAKE_SAMPLE_DATA';
-USE ROLE DEMO_ROLE;
-SELECT COUNT(*) AS orders_expect_1500000 FROM SNOWFLAKE_SAMPLE_DATA.TPCH_SF1.ORDERS;
-USE ROLE ACCOUNTADMIN;
+SHOW GRANTS ON DATABASE SNOWFLAKE_SAMPLE_DATA;
 
 -- 4. CoCo Desktop: Cortex access ----------------------------------------
 -- READY IF: SNOWFLAKE.CORTEX_USER (or CORTEX_AGENT_USER) is granted to PUBLIC,
@@ -66,23 +67,24 @@ WHERE policy_kind = 'AUTHENTICATION_POLICY';
 -- 9. Every attendee is ready ----------------------------------------------
 -- READY IF: every row says ok. USER_TYPE should be PERSON (or blank).
 -- Fix NOT GRANTED by adding the user to scripts/admin_setup.sql and re-running it.
-WITH attendees(username) AS (
-  SELECT UPPER(column1) FROM VALUES
-    ('JSMITH'),
-    ('ADOE')
-    -- , ('NEXT_USER')
-)
-SELECT a.username,
-       IFF(u.name IS NULL, 'MISSING', 'ok')               AS user_exists,
-       u.type                                             AS user_type,
-       IFF(u.disabled::BOOLEAN, 'DISABLED', 'ok')         AS enabled,
-       IFF(g.grantee_name IS NULL, 'NOT GRANTED', 'ok')   AS has_demo_role
-FROM attendees a
-LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.USERS u
-  ON u.name = a.username AND u.deleted_on IS NULL
-LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS g
-  ON g.grantee_name = a.username AND g.role = 'DEMO_ROLE' AND g.deleted_on IS NULL
-ORDER BY 1;
+-- Live data (SHOW commands), so users created a minute ago show up.
+SHOW USERS
+->> SHOW GRANTS OF ROLE DEMO_ROLE
+->> WITH attendees(username) AS (
+      SELECT UPPER(column1) FROM VALUES
+        ('JSMITH'),
+        ('ADOE')
+        -- , ('NEXT_USER')
+    )
+    SELECT a.username,
+           IFF(u."name" IS NULL, 'MISSING: create the user', 'ok')                  AS user_exists,
+           u."type"                                                                 AS user_type,
+           IFF(u."name" IS NULL, '-', IFF(u."disabled" = 'true', 'DISABLED', 'ok'))   AS enabled,
+           IFF(g."grantee_name" IS NULL, 'NOT GRANTED: add to admin_setup.sql', 'ok') AS has_demo_role
+    FROM attendees a
+    LEFT JOIN $2 u ON u."name" = a.username                                       -- SHOW USERS
+    LEFT JOIN $1 g ON g."grantee_name" = a.username AND g."granted_to" = 'USER'   -- SHOW GRANTS OF ROLE
+    ORDER BY 1;
 
 -- 10. Warehouse headroom ------------------------------------------------
 -- READY IF: you're happy with the size for ~30 people running dbt build at
