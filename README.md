@@ -13,7 +13,9 @@ describes, with three differences:
 1. **Your admin runs `scripts/admin_setup.sql` once.** It creates the shared
    `DEMO_ROLE`, `DEMO_WH` and `DEMO_DB` from the guide and grants `DEMO_ROLE`
    to every participant. `scripts/admin_readiness_check.sql` (read-only) then
-   confirms the account and every participant are ready.
+   confirms the account and every participant are ready. If the account has a
+   network policy, `scripts/admin_ci_network.sql` lets GitHub Actions reach
+   Snowflake for the participants only (needed for the CI/CD section).
 2. **You run `scripts/setup.sql` with your initials.** Change `XX` on the line
    `SET MY_INITIALS = 'XX';`, then Run all. It creates your own schema,
    `DEMO_DB.TPCH_<YOUR_INITIALS>`.

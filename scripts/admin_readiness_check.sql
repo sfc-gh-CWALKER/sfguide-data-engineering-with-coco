@@ -17,6 +17,17 @@ USE WAREHOUSE COMPUTE_WH;
 -- READY IF: one row each for DEMO_ROLE, DEMO_WH and DEMO_DB.
 SHOW ROLES LIKE 'DEMO_ROLE';
 SHOW WAREHOUSES LIKE 'DEMO_WH';
+
+-- 11. Module 4 CI/CD: can GitHub Actions reach Snowflake? -------------------
+-- Only matters if check 7 showed a network policy. GitHub's runners are not on
+-- your VPN, so the CI job is blocked unless attendees are on a policy that
+-- also allows SNOWFLAKE.NETWORK_SECURITY.GITHUBACTIONS_GLOBAL.
+-- READY IF: no account network policy, OR each attendee shows
+-- COCO_LAB_CI_POLICY (run scripts/admin_ci_network.sql to set it),
+-- OR you've decided attendees use the Module 4 laptop fallback instead.
+-- Replace JSMITH with one attendee; repeat for a couple of them.
+SHOW NETWORK RULES LIKE 'GITHUBACTIONS_GLOBAL' IN SCHEMA SNOWFLAKE.NETWORK_SECURITY;
+SHOW PARAMETERS LIKE 'NETWORK_POLICY' IN USER JSMITH;
 SHOW DATABASES LIKE 'DEMO_DB';
 
 -- 2. DEMO_ROLE owns the database and warehouse --------------------------
