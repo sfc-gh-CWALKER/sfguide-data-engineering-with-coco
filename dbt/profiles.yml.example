@@ -9,5 +9,5 @@ coco_de_guide:
       role: DEMO_ROLE
       database: DEMO_DB
       warehouse: DEMO_WH
-      schema: TPCH_TRANSFORMED
+      schema: TPCH_<YOUR_INITIALS>
       threads: 4
