@@ -1,7 +1,8 @@
 -- =====================================================================
 -- Data Engineering with CoCo: per-participant setup
 --
--- 1. Change XX below to your initials (2-4 letters), for example 'CW'.
+-- 1. Change XX below to your initials: 3 letters (first, middle, last), for example 'CJW'.
+--    Allowed: 2-4 letters only, no digits or spaces. Use the SAME value in the lab app.
 -- 2. Run all (down arrow next to the blue play button, or CMD/CTRL+Shift+Enter).
 --
 -- Your workshop admin already created the shared DEMO_ROLE, DEMO_WH and
@@ -21,7 +22,7 @@ USE WAREHOUSE DEMO_WH;
 -- another participant already uses the same initials.
 EXECUTE IMMEDIATE $$
 DECLARE
-  bad_initials EXCEPTION (-20001, 'Set MY_INITIALS at the top of scripts/setup.sql to your 2-4 letter initials (e.g. CW), then run the script again.');
+  bad_initials EXCEPTION (-20001, 'Set MY_INITIALS at the top of scripts/setup.sql to your initials, 2-4 letters only (e.g. CJW), then run the script again.');
   initials_taken EXCEPTION (-20002, 'Another participant already uses these initials. Add a letter (e.g. CW -> CWA) in MY_INITIALS and run the script again. Use the same initials in the lab app.');
   initials VARCHAR DEFAULT UPPER(TRIM($MY_INITIALS));
   schema_name VARCHAR;
